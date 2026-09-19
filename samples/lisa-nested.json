@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "guid": "DP6VP4K2QY",
+      "username": "luke.harris",
+      "agency": { "code": "WATECH", "name": "WA Technology Solutions", "region": "west" },
+      "roles": ["lisa_admin"],
+      "children": [
+        {
+          "guid": "DQ2XX8T7RR",
+          "username": "luke.harris.svc",
+          "roles": ["lisa_service"],
+          "children": [
+            { "guid": "DZ9QQ1L4WW", "username": "luke.harris.batch" }
+          ]
+        }
+      ]
+    },
+    { "guid": "DL6TV9M1XB", "username": "lukh461", "role": "lisa_reader" }
+  ]
+}

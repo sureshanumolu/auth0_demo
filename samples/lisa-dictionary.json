@@ -1,0 +1,21 @@
+{
+  "DP6VP4K2QY": {
+    "username": "luke.harris",
+    "agency": { "code": "WATECH", "name": "WA Technology Solutions" },
+    "roles": ["lisa_admin", "lisa_reader"],
+    "children": {
+      "DQ2XX8T7RR": {
+        "username": "luke.harris.svc",
+        "roles": ["lisa_service"],
+        "agency": { "code": "WATECH", "name": "WA Technology Solutions" }
+      }
+    }
+  },
+  "DL6TV9M1XB": {
+    "username": "lukh461",
+    "agency": { "code": "ECY", "name": "Department of Ecology" },
+    "roles": ["lisa_reader"],
+    "status": "active",
+    "lastReviewedOn": "2026-08-01"
+  }
+}

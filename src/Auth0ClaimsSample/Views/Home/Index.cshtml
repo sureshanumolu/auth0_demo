@@ -1,0 +1,35 @@
+@model LisaProfile
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<h1>LISA profile</h1>
+
+@if (Model.IsEmpty)
+{
+    <p class="empty">
+        No LISA claim found on this identity. Check that the post-login Action ran
+        and that Lisa:ClaimTypes matches the claim name in the ID token
+        (see <a asp-action="Claims">all claims</a>).
+    </p>
+}
+else
+{
+    <p class="meta">
+        @Model.Entries.Count top-level entr@(Model.Entries.Count == 1 ? "y" : "ies"),
+        @Model.All.Count() total including nested,
+        parsed from @Model.RawClaimCount raw claim(s).
+    </p>
+
+    @foreach (var entry in Model.Entries)
+    {
+        @await Html.PartialAsync("_LisaEntry", entry)
+    }
+
+    <h2>Flattened values</h2>
+    <table>
+        <tr><th>Usernames</th><td class="mono">@string.Join(", ", Model.Usernames)</td></tr>
+        <tr><th>Guids</th><td class="mono">@string.Join(", ", Model.Guids)</td></tr>
+        <tr><th>Roles</th><td class="mono">@string.Join(", ", Model.Roles)</td></tr>
+    </table>
+}

@@ -1,0 +1,162 @@
+@model Auth0ClaimsSample.Models.ClaimsPageViewModel
+@{
+    ViewData["Title"] = "Claims and authentication response";
+}
+
+<h1>Claims and authentication response</h1>
+
+<h2>1. Raw LISA claim, as it arrived</h2>
+<p class="meta">
+    Searched, in precedence order:
+    @foreach (var type in Model.SearchedClaimTypes)
+    {
+        <code>@type</code> <span>&nbsp;</span>
+    }
+    &mdash; only the first type that matched is parsed.
+</p>
+
+@if (Model.RawLisaClaims.Count == 0)
+{
+    <p class="empty">No LISA claim on the principal. The Action emitted nothing, or the
+    claim name does not match any of the types above.</p>
+    <p class="meta">
+        Claim types actually present &mdash; if the payload appears in the id_token below
+        but not here, it was dropped between the token and the cookie:
+    </p>
+    <table>
+        <thead><tr><th>Type</th><th>Count</th></tr></thead>
+        <tbody>
+            @foreach (var item in Model.ClaimTypeCensus)
+            {
+                <tr><td class="mono wrap">@item.Key</td><td class="meta">@item.Value</td></tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="meta">@Model.RawLisaClaims.Count raw claim(s) won precedence.</p>
+    foreach (var raw in Model.RawLisaClaims)
+    {
+        <h3 class="mono">@raw.Type</h3>
+        <p class="meta">
+            ValueType: <code>@(string.IsNullOrEmpty(raw.ValueType) ? "(none)" : raw.ValueType)</code>
+            @if (!raw.IsJson)
+            {
+                <span>&mdash; not JSON, shown verbatim</span>
+            }
+        </p>
+        <pre>@raw.Value</pre>
+    }
+}
+
+<h2>2. Parsed into C# objects</h2>
+@if (Model.ParsedProfileJson is null)
+{
+    <p class="empty">Nothing parsed.</p>
+}
+else
+{
+    <p class="meta">
+        @Model.TopLevelEntries top-level entr@(Model.TopLevelEntries == 1 ? "y" : "ies"),
+        @Model.TotalEntries total including nested &mdash;
+        <code>List&lt;LisaEntry&gt;</code> re-serialised so the structure is visible.
+        This is the shape <code>ILisaProfileAccessor.Current</code> hands your code.
+    </p>
+    <pre>@Model.ParsedProfileJson</pre>
+}
+
+<h2>3. Flat claim bag (@Model.Claims.Count)</h2>
+<p class="meta">
+    Every claim on the <code>ClaimsPrincipal</code>: the ones Auth0 sent, plus the
+    <code>lisa_*</code> claims added at the authentication callback. Flat because
+    <code>ClaimsIdentity</code> holds only string pairs &mdash; nesting cannot live here.
+</p>
+<table>
+    <thead>
+        <tr><th>Type</th><th>Value</th><th>ValueType</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var claim in Model.Claims)
+        {
+            <tr>
+                <td class="mono">@claim.Type</td>
+                <td class="mono wrap">@claim.Value</td>
+                <td class="meta">@claim.ValueType</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (!Model.ShowTokens)
+{
+    <h2>4. Authentication response</h2>
+    <p class="empty">Hidden outside Development &mdash; an id_token is a bearer credential.</p>
+}
+else
+{
+    <h2>4. Authentication response</h2>
+    <p class="warn">
+        Development only. These are live credentials for this session &mdash; an
+        <code>id_token</code> here carries the whole LISA payload. Never render this in production.
+    </p>
+
+    @foreach (var token in new[] { Model.IdToken, Model.AccessToken })
+    {
+        if (token is null)
+        {
+            continue;
+        }
+
+        <h3 class="mono">@token.Name</h3>
+
+        @if (token.Note is not null)
+        {
+            <p class="meta">@token.Note</p>
+        }
+
+        @if (token.PayloadJson is not null)
+        {
+            <p class="meta">Payload &mdash; the claims Auth0 issued, before .NET mapped anything:</p>
+            <pre>@token.PayloadJson</pre>
+        }
+
+        @if (token.HeaderJson is not null)
+        {
+            <p class="meta">Header:</p>
+            <pre class="small">@token.HeaderJson</pre>
+        }
+
+        <p class="meta">Compact JWT as issued:</p>
+        <pre class="small wrap">@token.Raw</pre>
+    }
+
+    @if (Model.IdToken is null && Model.AccessToken is null)
+    {
+        <p class="empty">No tokens in the auth cookie. <code>SaveTokens</code> is off,
+        or you signed in before it was enabled &mdash; sign out and back in.</p>
+    }
+
+    <h3>Authentication properties</h3>
+    @if (Model.AuthenticationProperties.Count == 0)
+    {
+        <p class="empty">None.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th>Key</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.AuthenticationProperties)
+                {
+                    <tr>
+                        <td class="mono">@item.Key</td>
+                        <td class="mono wrap">@item.Value</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}

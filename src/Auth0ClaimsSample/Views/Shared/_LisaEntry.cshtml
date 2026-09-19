@@ -1,0 +1,43 @@
+@model LisaEntry
+
+<div class="entry">
+    <div>
+        <strong>@(string.IsNullOrEmpty(Model.Username) ? "(no username)" : Model.Username)</strong>
+        @if (!string.IsNullOrEmpty(Model.Guid))
+        {
+            <span class="mono meta">&nbsp;@Model.Guid</span>
+        }
+    </div>
+
+    @if (Model.Agency is not null)
+    {
+        <div class="meta">Agency: @Model.Agency</div>
+    }
+
+    @if (Model.Roles.Count > 0)
+    {
+        <div class="meta">Roles: @string.Join(", ", Model.Roles)</div>
+    }
+
+    @if (Model.Extra.Count > 0)
+    {
+        <div class="meta">
+            Other:
+            @foreach (var extra in Model.Extra)
+            {
+                <span class="mono">@extra.Key=@extra.Value.ToString()</span>
+            }
+        </div>
+    }
+
+    @if (Model.Children.Count > 0)
+    {
+        <div class="children">
+            <div class="meta">Nested (@Model.Children.Count):</div>
+            @foreach (var child in Model.Children)
+            {
+                @await Html.PartialAsync("_LisaEntry", child)
+            }
+        </div>
+    }
+</div>

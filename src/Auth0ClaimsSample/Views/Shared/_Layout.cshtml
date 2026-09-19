@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Auth0 LISA Claims</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header>
+        <strong>LISA claims</strong>
+        <a asp-controller="Home" asp-action="Index">Profile</a>
+        <a asp-controller="Home" asp-action="Claims">All claims</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <span class="meta">@User.Identity!.Name</span>
+            <a asp-controller="Account" asp-action="Logout">Log out</a>
+        }
+        else
+        {
+            <a asp-controller="Account" asp-action="Login">Log in</a>
+        }
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+</body>
+</html>

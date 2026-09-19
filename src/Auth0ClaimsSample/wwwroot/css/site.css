@@ -1,0 +1,71 @@
+:root {
+  color-scheme: light dark;
+  --line: #d5d8dd;
+  --muted: #5b6270;
+  --accent: #0b5cab;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  margin: 0;
+  line-height: 1.5;
+}
+
+header {
+  border-bottom: 1px solid var(--line);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  gap: 1.25rem;
+  align-items: baseline;
+}
+
+header a { color: var(--accent); text-decoration: none; }
+header a:hover { text-decoration: underline; }
+
+main { padding: 1.5rem; max-width: 60rem; }
+
+h1 { font-size: 1.4rem; margin-top: 0; }
+h2 { font-size: 1.1rem; }
+
+.entry {
+  border-left: 3px solid var(--accent);
+  padding: 0.35rem 0 0.35rem 0.85rem;
+  margin: 0.5rem 0;
+}
+
+.entry .meta { color: var(--muted); font-size: 0.875rem; }
+
+.entry .children { margin-left: 1rem; border-left: 1px dashed var(--line); padding-left: 0.75rem; }
+
+code, .mono { font-family: Consolas, "Cascadia Mono", monospace; font-size: 0.875rem; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.35rem 0.5rem; vertical-align: top; }
+th { font-weight: 600; }
+
+.empty { color: var(--muted); font-style: italic; }
+
+/* Claims page: raw payloads, parsed objects and the token response. */
+.meta { color: var(--muted); font-size: 0.875rem; }
+.warn {
+  color: #8a5300;
+  background: #fff6e5;
+  border-left: 3px solid #d98a00;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.875rem;
+}
+pre {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+pre.small { font-size: 0.75rem; }
+/* Long JWTs and claim values must wrap rather than stretch the table. */
+.wrap { word-break: break-all; white-space: pre-wrap; }
+h2 { margin-top: 2rem; border-bottom: 1px solid #e1e4e8; padding-bottom: 0.3rem; }
+h3 { margin-top: 1.25rem; margin-bottom: 0.3rem; }
