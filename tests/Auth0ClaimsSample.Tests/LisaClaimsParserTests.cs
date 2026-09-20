@@ -475,4 +475,62 @@ public class LisaClaimsParserTests
         Assert.Equal(2, raw.Count);
         Assert.Equal(new[] { "one", "two" }, entries.Select(e => e.Username));
     }
+
+    // ------------------------------------------------------- profile wrapper
+
+    /// <summary>
+    /// The IdP sends the records inside a profile envelope. Listing "_lisa" in
+    /// NestedPropertyNames is what makes the parser descend into the list
+    /// instead of reading _email/_first_name/... as records.
+    /// </summary>
+    private const string Wrapper = """
+        {
+          "_auth0_guid": "auth0|6a5e87edd6878c570943cf15",
+          "_email": "lukh461@okta.com",
+          "_first_name": "Luke",
+          "_last_name": "Harris",
+          "_lisa": [
+            { "guid": "TEST-1PM2QP7FL4-D1LW4VZ0FD-OKTA", "username": "luke.harris" },
+            { "guid": "TEST-5DL7WL1DQ-DD7WV4ZZ8D-OKTA", "username": "lukh461" },
+            { "guid": "TEST-1QM6LW0LT-DD7WV4ZZ8D-OKTA", "username": "lharris" }
+          ]
+        }
+        """;
+
+    [Fact]
+    public void Wrapper_WithLisaListed_ReadsOnlyTheRecords()
+    {
+        var options = new LisaClaimsOptions { NestedPropertyNames = { "_lisa" } };
+
+        var entries = LisaClaimsParser.ParseValue(Wrapper, options);
+
+        Assert.Equal(3, entries.Count);
+        Assert.Equal(
+            new[] { "luke.harris", "lukh461", "lharris" },
+            entries.Select(e => e.Username));
+        Assert.Equal("TEST-1PM2QP7FL4-D1LW4VZ0FD-OKTA", entries[0].Guid);
+
+        // The envelope's own fields must not become records.
+        Assert.DoesNotContain(entries, e => e.Username == "lukh461@okta.com");
+        Assert.DoesNotContain(entries, e => e.Username == "Luke");
+    }
+
+    [Fact]
+    public void Wrapper_WithoutLisaListed_AlsoYieldsTheEnvelopeFieldsAsRecords()
+    {
+        // Pins the failure mode. Without "_lisa" the object is read as a
+        // dictionary: every sibling becomes a record keyed by its property name.
+        // The real records survive - ReadKeyedEntries still recurses into the
+        // array - so the damage is contamination, not loss. That is a softer
+        // failure than the Action's, where the array was dropped outright.
+        var options = new LisaClaimsOptions();
+        Assert.DoesNotContain("_lisa", options.NestedPropertyNames);
+
+        var entries = LisaClaimsParser.ParseValue(Wrapper, options);
+
+        Assert.Contains(entries, e => e.Username == "luke.harris");
+        Assert.Contains(entries, e => e.Username == "lukh461@okta.com");
+        Assert.Contains(entries, e => e.Username == "Luke");
+        Assert.True(entries.Count > 3, $"expected contamination, got {entries.Count}");
+    }
 }
