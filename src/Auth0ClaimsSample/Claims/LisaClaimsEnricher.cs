@@ -23,10 +23,29 @@ public static class LisaClaimsEnricher
             return 0;
         }
 
-        var entries = LisaClaimsParser.Parse(rawClaims, options);
-        var flattened = LisaClaimsParser.Flatten(entries, options);
+        var payload = LisaClaimsParser.ParsePayload(rawClaims, options);
+        var flattened = LisaClaimsParser.Flatten(payload.Entries, options).ToList();
+
+        // The envelope's own properties are per-user attributes, not records,
+        // so they become claims in their own right rather than entry fields.
+        var attributeClaims = options.EmitAttributeClaims
+            ? payload.AttributeTexts
+                .Select(pair => new Claim(
+                    string.IsNullOrEmpty(options.AttributeClaimPrefix)
+                        ? pair.Key
+                        : $"{options.AttributeClaimPrefix}{pair.Key}",
+                    pair.Value))
+                .ToList()
+            : new List<Claim>();
+
+        // Never shadow a claim the IdP already issued - "_email" beside Auth0's
+        // own "email" is fine, but two "_email" claims are not.
+        var added = attributeClaims
+            .Where(c => !identity.HasClaim(e => e.Type == c.Type))
+            .ToList();
 
         identity.AddClaims(flattened);
+        identity.AddClaims(added);
 
         if (options.RemoveRawClaim)
         {
@@ -37,11 +56,13 @@ public static class LisaClaimsEnricher
         }
 
         logger?.LogInformation(
-            "Flattened {EntryCount} top-level LISA entries from {RawCount} raw claim(s) into {ClaimCount} claim(s)",
-            entries.Count,
+            "Flattened {EntryCount} top-level LISA entries from {RawCount} raw claim(s) into " +
+            "{ClaimCount} claim(s), plus {AttributeCount} envelope attribute(s)",
+            payload.Entries.Count,
             rawClaims.Count,
-            flattened.Count);
+            flattened.Count,
+            added.Count);
 
-        return flattened.Count;
+        return flattened.Count + added.Count;
     }
 }

@@ -58,6 +58,20 @@ public sealed class LisaClaimsOptions
     public bool EmitPairClaims { get; set; } = true;
 
     /// <summary>
+    /// Emit the profile envelope's own properties (_auth0_guid, _email,
+    /// _first_name, ...) as claims in their own right. They describe the user
+    /// rather than any LISA record, so they are never folded into an entry.
+    /// </summary>
+    public bool EmitAttributeClaims { get; set; } = true;
+
+    /// <summary>
+    /// Prefix for attribute claim types. Empty keeps the IdP's own names
+    /// (_email), which is usually what a consumer expects; set something like
+    /// "lisa_attr" to namespace them away from collisions.
+    /// </summary>
+    public string AttributeClaimPrefix { get; set; } = string.Empty;
+
+    /// <summary>
     /// Emit one claim per JSON leaf, typed by its path ("lisa:0.agency.code").
     /// Off by default: on a large payload this bloats the auth cookie.
     /// </summary>

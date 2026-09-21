@@ -5,6 +5,29 @@
 
 <h1>LISA profile</h1>
 
+@if (Model.Attributes.Count > 0)
+{
+    <h2>User attributes</h2>
+    <p class="meta">
+        Root-level properties from the profile envelope, kept separate from the
+        records because they describe the user rather than any one LISA entry.
+    </p>
+    <table>
+        <thead><tr><th>Name</th><th>Value</th></tr></thead>
+        <tbody>
+            @foreach (var item in Model.AttributeTexts)
+            {
+                <tr>
+                    <td class="mono">@item.Key</td>
+                    <td class="mono wrap">@item.Value</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <h2>LISA records</h2>
+}
+
 @if (Model.IsEmpty)
 {
     <p class="empty">

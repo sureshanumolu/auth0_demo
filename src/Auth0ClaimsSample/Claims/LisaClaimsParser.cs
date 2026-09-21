@@ -99,6 +99,94 @@ public static class LisaClaimsParser
         return entries;
     }
 
+    /// <summary>
+    /// Parse claims into records AND the envelope attributes beside them.
+    ///
+    /// <see cref="Parse"/> returns records only, which is all a flat consumer
+    /// needs. When the payload is a profile wrapper the scalars sitting next to
+    /// the list - _auth0_guid, _email, _first_name - describe the user rather
+    /// than any record, and this keeps the two apart instead of discarding the
+    /// former.
+    /// </summary>
+    public static LisaPayload ParsePayload(IEnumerable<Claim> claims, LisaClaimsOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(claims);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var attributes = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        var entries = new List<LisaEntry>();
+
+        foreach (var claim in claims)
+        {
+            var payload = ParsePayloadValue(claim.Value, options);
+
+            foreach (var pair in payload.Attributes)
+            {
+                // First claim wins, so a multi-claim array cannot keep
+                // overwriting attributes with the same values.
+                attributes.TryAdd(pair.Key, pair.Value);
+            }
+
+            entries.AddRange(payload.Entries);
+        }
+
+        return new LisaPayload(attributes, entries);
+    }
+
+    /// <summary>Parse one claim value into records plus envelope attributes.</summary>
+    public static LisaPayload ParsePayloadValue(string? value, LisaClaimsOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return LisaPayload.Empty;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed[0] != '{')
+        {
+            // Only an object can carry attributes beside the list.
+            return new LisaPayload(LisaPayload.Empty.Attributes, ParseValue(trimmed, options));
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(trimmed, DocumentOptions);
+            var root = document.RootElement;
+
+            // Not a wrapper: an entry, or a dictionary of entries. No envelope.
+            if (LooksLikeEntry(root) || !TryFindNested(root, options, out var nested))
+            {
+                return new LisaPayload(
+                    LisaPayload.Empty.Attributes,
+                    ReadEntries(root, options, 0));
+            }
+
+            var attributes = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+            foreach (var property in root.EnumerateObject())
+            {
+                if (!IsNestedName(property.Name, options))
+                {
+                    // Clone() detaches the value from the JsonDocument we are
+                    // about to dispose.
+                    attributes[property.Name] = property.Value.Clone();
+                }
+            }
+
+            return new LisaPayload(attributes, ReadEntries(nested, options, 1));
+        }
+        catch (JsonException)
+        {
+            if (options.ThrowOnMalformed)
+            {
+                throw;
+            }
+
+            return LisaPayload.Empty;
+        }
+    }
+
     /// <summary>Parse a single claim value (shapes 1-6 above).</summary>
     public static IReadOnlyList<LisaEntry> ParseValue(string? value, LisaClaimsOptions options)
     {

@@ -20,7 +20,11 @@ public static class LisaClaimsPrincipalExtensions
             return LisaProfile.Empty;
         }
 
-        return new LisaProfile(LisaClaimsParser.Parse(rawClaims, options), rawClaims.Count);
+        // ParsePayload, not Parse: it keeps the envelope's own attributes
+        // (_auth0_guid, _email, ...) separate from the records.
+        var payload = LisaClaimsParser.ParsePayload(rawClaims, options);
+
+        return new LisaProfile(payload.Entries, rawClaims.Count, payload.Attributes);
     }
 
     /// <summary>Reads the flattened claims - only works after LisaClaimsEnricher has run.</summary>
