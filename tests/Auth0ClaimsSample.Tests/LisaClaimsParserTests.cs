@@ -533,4 +533,110 @@ public class LisaClaimsParserTests
         Assert.Contains(entries, e => e.Username == "Luke");
         Assert.True(entries.Count > 3, $"expected contamination, got {entries.Count}");
     }
+
+    // -------------------------------------------- envelope attribute split
+
+    [Fact]
+    public void ParsePayload_SplitsEnvelopeAttributesFromRecords()
+    {
+        var options = new LisaClaimsOptions { NestedPropertyNames = { "_lisa" } };
+
+        var payload = LisaClaimsParser.ParsePayloadValue(Wrapper, options);
+
+        Assert.Equal(3, payload.Entries.Count);
+        Assert.Equal(
+            new[] { "luke.harris", "lukh461", "lharris" },
+            payload.Entries.Select(e => e.Username));
+
+        Assert.Equal(4, payload.Attributes.Count);
+        Assert.Equal("lukh461@okta.com", payload.AttributeText("_email"));
+        Assert.Equal("Luke", payload.AttributeText("_first_name"));
+        Assert.Equal("Harris", payload.AttributeText("_last_name"));
+        Assert.Equal("auth0|6a5e87edd6878c570943cf15", payload.AttributeText("_auth0_guid"));
+
+        // The list itself is never an attribute.
+        Assert.DoesNotContain("_lisa", payload.Attributes.Keys);
+
+        // ...and no attribute leaked into the records.
+        Assert.DoesNotContain(payload.Entries, e => e.Username == "Luke");
+    }
+
+    [Fact]
+    public void ParsePayload_BareArray_HasNoAttributes()
+    {
+        var payload = LisaClaimsParser.ParsePayloadValue(
+            """[{ "guid": "A", "username": "one" }]""", Options());
+
+        Assert.Empty(payload.Attributes);
+        Assert.Equal("one", Assert.Single(payload.Entries).Username);
+    }
+
+    [Fact]
+    public void ParsePayload_Dictionary_IsNotMistakenForAnEnvelope()
+    {
+        // A guid-keyed dictionary has no container property, so every value is
+        // a record and nothing should be siphoned off as an attribute.
+        var payload = LisaClaimsParser.ParsePayloadValue(
+            """{ "A": { "username": "one" }, "B": { "username": "two" } }""", Options());
+
+        Assert.Empty(payload.Attributes);
+        Assert.Equal(2, payload.Entries.Count);
+    }
+
+    [Fact]
+    public void Enrich_EmitsEnvelopeAttributesAsTheirOwnClaims()
+    {
+        var options = new LisaClaimsOptions { NestedPropertyNames = { "_lisa" } };
+        var identity = new ClaimsIdentity("test");
+        identity.AddClaim(new Claim(LisaClaimTypes.Raw, Wrapper));
+
+        LisaClaimsEnricher.Enrich(identity, options);
+
+        Assert.Equal("lukh461@okta.com", identity.FindFirst("_email")?.Value);
+        Assert.Equal("Luke", identity.FindFirst("_first_name")?.Value);
+        Assert.Equal(3, identity.FindAll(LisaClaimTypes.Username).Count());
+    }
+
+    [Fact]
+    public void Enrich_DoesNotOverwriteAClaimTheIdpAlreadyIssued()
+    {
+        var options = new LisaClaimsOptions { NestedPropertyNames = { "_lisa" } };
+        var identity = new ClaimsIdentity("test");
+        identity.AddClaim(new Claim("_email", "original@okta.com"));
+        identity.AddClaim(new Claim(LisaClaimTypes.Raw, Wrapper));
+
+        LisaClaimsEnricher.Enrich(identity, options);
+
+        Assert.Equal("original@okta.com", Assert.Single(identity.FindAll("_email")).Value);
+    }
+
+    [Fact]
+    public void Enrich_AttributeClaimsCanBePrefixedOrDisabled()
+    {
+        var identity = new ClaimsIdentity("test");
+        identity.AddClaim(new Claim(LisaClaimTypes.Raw, Wrapper));
+        LisaClaimsEnricher.Enrich(
+            identity,
+            new LisaClaimsOptions
+            {
+                NestedPropertyNames = { "_lisa" },
+                AttributeClaimPrefix = "lisa_attr",
+            });
+
+        Assert.Equal("lukh461@okta.com", identity.FindFirst("lisa_attr_email")?.Value);
+        Assert.Null(identity.FindFirst("_email"));
+
+        var off = new ClaimsIdentity("test");
+        off.AddClaim(new Claim(LisaClaimTypes.Raw, Wrapper));
+        LisaClaimsEnricher.Enrich(
+            off,
+            new LisaClaimsOptions
+            {
+                NestedPropertyNames = { "_lisa" },
+                EmitAttributeClaims = false,
+            });
+
+        Assert.Null(off.FindFirst("_email"));
+        Assert.Equal(3, off.FindAll(LisaClaimTypes.Username).Count());
+    }
 }
