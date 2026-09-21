@@ -8,6 +8,7 @@ artifacts/
 # IDE
 .vs/
 .idea/
+.vscode/
 *.user
 *.suo
 *.userprefs
